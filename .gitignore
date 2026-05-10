@@ -1,0 +1,15 @@
+# temp frames (large, regenerable)
+all_frames/
+temp_frames/
+frame_sample_*.jpg
+
+# runtime outputs
+logs/*.log
+output/
+results/
+
+# OS
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
