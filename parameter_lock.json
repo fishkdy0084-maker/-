@@ -1,0 +1,71 @@
+{
+  "project_name": "original_eraser",
+  "test_name": "GTX1080_7s_ProPainter_smoke_test_v1",
+  "plan": "Plan A",
+  "engine": "ProPainter",
+
+  "gpu": {
+    "name": "NVIDIA GeForce GTX 1080",
+    "vram_gb": 8,
+    "architecture": "Pascal (sm_61)",
+    "driver_version": "31.0.15.2849",
+    "driver_date": "2023-02-02",
+    "device_index_note": "GPU 1 (GPU 0 = Intel UHD 770). set CUDA_VISIBLE_DEVICES=1"
+  },
+
+  "params": {
+    "width": 432,
+    "height": 240,
+    "fp16": true,
+    "subvideo_length": 50,
+    "neighbor_length": 5,
+    "ref_stride": 15,
+    "mask_dilation": 4,
+    "raft_iter": 20,
+    "save_fps": 24,
+    "mode": "video_inpainting"
+  },
+
+  "params_notes": {
+    "width_height": "ProPainter 공식 학습 해상도 432x240. 8의 배수. VRAM 최소화.",
+    "fp16": "GTX 1080에서 fp16 지원 확인. VRAM ~40% 절감.",
+    "subvideo_length": "기본값 80 → 50. VRAM 사용량에 직결. 분할 처리로 긴 영상도 처리.",
+    "neighbor_length": "기본값 10 → 5. 로컬 참조 프레임 감소 → VRAM 절감.",
+    "ref_stride": "기본값 10 → 15. 글로벌 참조 간격 확대 → 참조 프레임 수 감소."
+  },
+
+  "fallback_params": {
+    "description": "위 파라미터로 OOM 시 적용",
+    "width": 320,
+    "height": 176,
+    "fp16": true,
+    "subvideo_length": 30,
+    "neighbor_length": 3,
+    "ref_stride": 20
+  },
+
+  "frozen_commands": {
+    "phase_0": "python inference_propainter.py --video inputs/video_completion/running_car.mp4 --mask inputs/video_completion/mask_square.png --height 240 --width 432 --fp16 --subvideo_length 50 --neighbor_length 5 --ref_stride 15",
+    "phase_1_single_mask": "python inference_propainter.py --video input/video/test_input.mp4 --mask input/masks/test_mask.png --height 240 --width 432 --fp16 --subvideo_length 50 --neighbor_length 5 --ref_stride 15",
+    "phase_1_mask_folder": "python inference_propainter.py --video input/video/test_input.mp4 --mask input/masks/test_mask --height 240 --width 432 --fp16 --subvideo_length 50 --neighbor_length 5 --ref_stride 15"
+  },
+
+  "priority": "execution_success_over_quality",
+
+  "do_not_change": [
+    "fp16 = true",
+    "subvideo_length <= 50",
+    "width = 432, height = 240 (1차 테스트)",
+    "neighbor_length <= 5",
+    "ref_stride >= 15"
+  ],
+
+  "fallback_policy": {
+    "switch_to_plan_b_if": [
+      "repeated_oom",
+      "cuda_runtime_failure",
+      "sample_test_not_passing",
+      "result_not_generated"
+    ]
+  }
+}
