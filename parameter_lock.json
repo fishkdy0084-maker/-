@@ -1,0 +1,88 @@
+{
+  "_meta": {
+    "project": "원본 지우개",
+    "version": "v1.0",
+    "date": "2026-05-10",
+    "target_gpu": "NVIDIA GeForce GTX 1080",
+    "target_vram_gb": 8,
+    "purpose": "GTX 1080 8GB 기준 OOM 방지 + 7초 smoke test 안전 파라미터 세트",
+    "priority": "메모리 안정성 > 품질 > 속도"
+  },
+
+  "resolution": {
+    "width": 432,
+    "height": 240,
+    "note": "ProPainter 공식 학습 해상도 432x240. VRAM 예측 기준: 50프레임 fp16 = ~7GB 이하"
+  },
+
+  "precision": {
+    "fp16": true,
+    "note": "반정밀도 사용. GTX 1080에서 fp16은 약 40% VRAM 절감. fp32 대비 품질 차이 미미"
+  },
+
+  "temporal_params": {
+    "subvideo_length": 50,
+    "neighbor_length": 5,
+    "ref_stride": 15,
+    "notes": {
+      "subvideo_length": "기본값 80 → 50으로 감소. VRAM 사용량 직결. 7초 210프레임도 분할 처리됨",
+      "neighbor_length": "기본값 10 → 5로 감소. 로컬 참조 프레임 감소 → VRAM 절감. 짧은 자막엔 충분",
+      "ref_stride": "기본값 10 → 15로 증가. 글로벌 참조 간격 확대 → 참조 프레임 수 감소 → VRAM 절감"
+    }
+  },
+
+  "input": {
+    "video": "inputs/video_completion/running_car.mp4",
+    "mask": "inputs/video_completion/mask_square.png",
+    "note_smoke_test": "Phase 0: 공식 샘플로 smoke test",
+    "note_user_test": "Phase 1: inputs_user/test_7s/ 폴더 구조 사용"
+  },
+
+  "output": {
+    "results_dir": "results/",
+    "expected_output": "results/{video_name}/inpainted_frame_*.jpg + .mp4"
+  },
+
+  "vram_estimate": {
+    "resolution_432x240_subvideo50_fp16": "~3-4 GB",
+    "resolution_432x240_subvideo50_fp32": "~5-6 GB",
+    "resolution_720x480_subvideo50_fp16": "~7 GB",
+    "resolution_720x480_subvideo50_fp32": "OOM 위험",
+    "resolution_1280x720_subvideo50_fp16": "OOM",
+    "safety_margin_note": "GTX 1080 8GB 기준: 432x240 fp16 subvideo_length=50 → 안전"
+  },
+
+  "fallback_params": {
+    "description": "위 파라미터로 OOM 발생 시 폴백 설정",
+    "subvideo_length": 30,
+    "neighbor_length": 3,
+    "ref_stride": 20,
+    "width": 320,
+    "height": 180,
+    "fp16": true,
+    "vram_estimate": "~2 GB (매우 안전)"
+  },
+
+  "frozen_command_smoke_test": {
+    "description": "Phase 0 smoke test 고정 명령",
+    "command": "python inference_propainter.py --video inputs/video_completion/running_car.mp4 --mask inputs/video_completion/mask_square.png --height 240 --width 432 --fp16 --subvideo_length 50 --neighbor_length 5 --ref_stride 15"
+  },
+
+  "frozen_command_user_mp4": {
+    "description": "Phase 1a: 사용자 MP4 + 단일 마스크 PNG",
+    "command": "python inference_propainter.py --video inputs_user/test_7s_single/your_7s_video.mp4 --mask inputs_user/test_7s_single/mask_subtitle.png --height 240 --width 432 --fp16 --subvideo_length 50 --neighbor_length 5 --ref_stride 15"
+  },
+
+  "frozen_command_user_frames": {
+    "description": "Phase 1b: 사용자 프레임 폴더 + 마스크 폴더",
+    "command": "python inference_propainter.py --video inputs_user/test_7s/frames --mask inputs_user/test_7s/masks --height 240 --width 432 --fp16 --subvideo_length 50 --neighbor_length 5 --ref_stride 15"
+  },
+
+  "do_not_change": [
+    "fp16 = true (GTX 1080 8GB에서 필수)",
+    "subvideo_length <= 50 (OOM 방지)",
+    "width = 432, height = 240 (1차 테스트 고정 해상도)",
+    "neighbor_length <= 5 (메모리 안전 상한)",
+    "ref_stride >= 15 (참조 프레임 수 제한)"
+  ]
+}
